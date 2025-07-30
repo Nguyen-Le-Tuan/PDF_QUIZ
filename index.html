@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF Quiz App</title>
+  <link rel="stylesheet" href="styles/main.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+</head>
+<body>
+  <nav>
+    <button onclick="showTab('home')">Home</button>
+    <button onclick="showTab('test')">Test</button>
+    <button onclick="showTab('dashboard')">Dashboard</button>
+  </nav>
+  <main>
+    <section id="home" class="tab">
+      <h2>Import PDF</h2>
+      <input type="file" id="pdfInput" accept="application/pdf" />
+      <div id="uploadStatus"></div>
+    </section>
+
+    <section id="test" class="tab" style="display:none">
+      <h2>Test Area</h2>
+      <div id="modeSelect">
+        <button onclick="startReviewMode()">Review Mode</button>
+        <button onclick="startTestMode()">Test Mode</button>
+      </div>
+      <div id="quizArea"></div>
+    </section>
+
+    <section id="dashboard" class="tab" style="display:none">
+      <h2>Dashboard</h2>
+      <div id="dashboardContent"></div>
+    </section>
+  </main>
+
+  <script src="scripts/storage.js"></script>
+  <script src="scripts/parser.js"></script>
+  <script src="scripts/extractor.js"></script>
+  <script src="scripts/engine.js"></script>
+  <script src="scripts/ui.js"></script>
+  <script src="scripts/app.js"></script>
+
+  <script>
+    function showTab(tabId) {
+      document.querySelectorAll('.tab').forEach(el => el.style.display = 'none');
+      document.getElementById(tabId).style.display = 'block';
+    }
+  </script>
+</body>
+</html>
