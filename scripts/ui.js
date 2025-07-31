@@ -12,13 +12,13 @@ function renderQuestion() {
     qa.innerHTML = '<p>No questions loaded.</p>';
     return;
   }
-  console.log("options trước filter:", q.options);
+  // console.log("options trước filter:", q.options);
   const optionsHTML = q.options
   .filter(opt => opt.trim().length > 2 && /^[ABCD]\s*\./.test(opt))
   .map(opt => `<button onclick="selectOption(this, '${opt[0]}')">${opt}</button>`)
   .join('');
-  console.log("options sau filter:", optionsHTML);
-
+  // console.log("options sau filter:", optionsHTML);
+  console.log("Đáp án đúng là: ", q.correct);
   qa.innerHTML = `
     <div class="quiz-layout">
       <div class="passage">${q.passage}</div>

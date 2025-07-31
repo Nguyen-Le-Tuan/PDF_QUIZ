@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAT PDF QUIZ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .modal-bg {
+            background-color: rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div id="app" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        <!-- Header -->
+        <header class="mb-8">
+            <h1 class="text-5xl font-bold text-center text-gray-800">SAT PDF QUIZ</h1>
+            <p class="text-center text-gray-600 mt-2">Tải lên tệp PDF câu hỏi của bạn và bắt đầu học tập hiệu quả!</p>
+        </header>
+
+        <!-- Tabs -->
+        <div class="mb-6 border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                <button id="tab-practice" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg border-indigo-500 text-indigo-600">Luyện tập</button>
+                <button id="tab-dashboard" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Bảng điều khiển</button>
+                <button id="tab-question-list" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Danh sách câu hỏi</button>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <main id="main-content">
+            <!-- Practice Tab Content -->
+            <div id="practice-content">
+                <!-- Initial View: Upload and Mode Selection -->
+                <div id="initial-view" class="text-center bg-white p-8 rounded-xl shadow-md">
+                    <h2 class="text-2xl font-semibold mb-4">Bắt đầu</h2>
+                    <p class="mb-6 text-gray-600">Tải lên tệp PDF của bạn để phân tích câu hỏi.</p>
+                    <div class="mb-6">
+                        <label for="pdf-upload" class="cursor-pointer bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors">Chọn tệp PDF</label>
+                        <input type="file" id="pdf-upload" class="hidden" accept=".pdf">
+                    </div>
+                    <p id="file-name" class="mb-6 text-gray-500"></p>
+                    <div id="mode-selection" class="hidden">
+                        <h3 class="text-xl font-medium mb-4">Chọn một chế độ:</h3>
+                        <div class="flex justify-center space-x-4">
+                            <button id="review-mode-btn" class="bg-blue-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors">Ôn tập</button>
+                            <button id="test-mode-btn" class="bg-green-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors">Thi thử</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading View -->
+                <div id="loading-view" class="hidden text-center bg-white p-8 rounded-xl shadow-md">
+                    <div class="loader mx-auto mb-4"></div>
+                    <p class="text-lg font-medium text-gray-700">Đang phân tích PDF... Vui lòng đợi.</p>
+                    <p class="text-gray-500">Quá trình này có thể mất vài phút đối với các tệp lớn.</p>
+                </div>
+                
+                <!-- Practice Area -->
+                <div id="practice-area" class="hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <!-- Left Panel: Passage -->
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                            <h3 class="text-xl font-semibold mb-4 border-b pb-2">Đoạn văn</h3>
+                            <div id="passage-content" class="prose max-w-none h-96 overflow-y-auto"></div>
+                        </div>
+                        <!-- Right Panel: Question -->
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                            <h3 class="text-xl font-semibold mb-4 border-b pb-2">Câu hỏi <span id="question-counter"></span></h3>
+                            <div id="question-text" class="mb-4 font-medium"></div>
+                            <div id="options-container" class="space-y-3"></div>
+                        </div>
+                    </div>
+                    <!-- Controls -->
+                    <div id="controls" class="mt-6 flex justify-between items-center">
+                        <button id="prev-btn" class="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition-colors">Câu trước</button>
+                        <div id="review-controls">
+                            <button id="check-btn" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors">Kiểm tra</button>
+                        </div>
+                        <div id="test-controls" class="hidden">
+                             <button id="next-btn" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors">Câu tiếp theo</button>
+                             <button id="submit-btn" class="hidden bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors">Nộp bài</button>
+                        </div>
+                        <button id="next-btn-review" class="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition-colors">Câu tiếp theo</button>
+                    </div>
+                    <!-- Explanation Area -->
+                    <div id="explanation-area" class="hidden mt-6 bg-green-50 border-l-4 border-green-400 p-4 rounded-r-lg">
+                        <h4 class="font-bold text-green-800">Giải thích</h4>
+                        <p id="explanation-text" class="text-green-700"></p>
+                    </div>
+                </div>
+
+                 <!-- Test Result View -->
+                <div id="test-result-view" class="hidden bg-white p-8 rounded-xl shadow-md">
+                    <h2 class="text-3xl font-bold text-center mb-4">Kết quả Bài thi</h2>
+                    <p id="score" class="text-2xl text-center font-semibold mb-6"></p>
+                    <div id="result-details" class="space-y-6"></div>
+                    <div class="text-center mt-8">
+                        <button id="back-to-main" class="bg-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors">Quay lại trang chính</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Tab Content -->
+            <div id="dashboard-content" class="hidden bg-white p-8 rounded-xl shadow-md">
+                <h2 class="text-2xl font-bold mb-6">Tiến trình học tập</h2>
+                <div id="dashboard-stats" class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                    <div class="bg-blue-100 p-6 rounded-lg">
+                        <p class="text-4xl font-bold text-blue-600" id="total-questions-stat">0</p>
+                        <p class="text-gray-600">Tổng số câu hỏi</p>
+                    </div>
+                    <div class="bg-green-100 p-6 rounded-lg">
+                        <p class="text-4xl font-bold text-green-600" id="answered-questions-stat">0</p>
+                        <p class="text-gray-600">Câu hỏi đã ôn tập</p>
+                    </div>
+                    <div class="bg-yellow-100 p-6 rounded-lg">
+                        <p class="text-4xl font-bold text-yellow-600" id="tests-taken-stat">0</p>
+                        <p class="text-gray-600">Bài thi đã làm</p>
+                    </div>
+                </div>
+                <div class="mt-8">
+                    <h3 class="text-xl font-semibold mb-4">Lịch sử thi thử</h3>
+                    <div id="test-history-container" class="space-y-4">
+                        <p class="text-gray-500">Chưa có lịch sử thi thử.</p>
+                    </div>
+                </div>
+            </div>
+            <!-- Question list -->
+            <div id="question-list-content" class="hidden bg-white p-8 rounded-xl shadow-md">
+                <h2 class="text-2xl font-bold mb-6">Danh sách câu hỏi</h2>
+                <div id="questionListContainer" class="grid grid-cols-5 gap-3"></div>
+            </div>
+              
+        </main>
+    </div>
+
+    <!-- Test Mode Modal -->
+    <div id="test-mode-modal" class="hidden fixed inset-0 z-10 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="fixed inset-0 transition-opacity modal-bg"></div>
+            <div class="relative bg-white rounded-lg shadow-xl p-8 max-w-sm w-full">
+                <h3 class="text-xl font-medium leading-6 text-gray-900 mb-4">Cài đặt Thi thử</h3>
+                <div>
+                    <label for="num-questions" class="block text-sm font-medium text-gray-700">Số lượng câu hỏi:</label>
+                    <input type="number" name="num-questions" id="num-questions" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" min="1">
+                </div>
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button type="button" id="cancel-test-mode" class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50">Hủy</button>
+                    <button type="button" id="start-test-btn" class="bg-green-600 text-white py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium hover:bg-green-700">Bắt đầu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module">
+        // Firebase is not used in this version as per instructions to avoid complex backend setup.
+        // All data will be stored in localStorage for persistence on the user's browser.
+
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
+
+        let allQuestions = [];
+        let currentQuestionIndex = 0;
+        let currentMode = ''; // 'review' or 'test'
+        let testQuestions = [];
+        let userAnswers = {}; // For test mode
+
+        const initialView = document.getElementById('initial-view');
+        const loadingView = document.getElementById('loading-view');
+        const practiceArea = document.getElementById('practice-area');
+        const modeSelection = document.getElementById('mode-selection');
+        const pdfUpload = document.getElementById('pdf-upload');
+        const fileNameEl = document.getElementById('file-name');
+        
+        const passageContent = document.getElementById('passage-content');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const questionCounter = document.getElementById('question-counter');
+        const explanationArea = document.getElementById('explanation-area');
+        const explanationText = document.getElementById('explanation-text');
+
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtnReview = document.getElementById('next-btn-review');
+        const checkBtn = document.getElementById('check-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const submitBtn = document.getElementById('submit-btn');
+        
+        const reviewControls = document.getElementById('review-controls');
+        const testControls = document.getElementById('test-controls');
+        const testResultView = document.getElementById('test-result-view');
+
+        const tabPractice = document.getElementById('tab-practice');
+        const tabDashboard = document.getElementById('tab-dashboard');
+        const tabQuestionList = document.getElementById('tab-question-list');
+
+        const practiceContent = document.getElementById('practice-content');
+        const dashboardContent = document.getElementById('dashboard-content');
+        const QuestionListContent = document.getElementById('question-list-content');
+
+        const testModeModal = document.getElementById('test-mode-modal');
+
+        // --- PDF Parsing Logic ---
+        pdfUpload.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            fileNameEl.textContent = `Tệp đã chọn: ${file.name}`;
+            initialView.classList.add('hidden');
+            loadingView.classList.remove('hidden');
+
+            try {
+                const pdfText = await readPdfFile(file);
+                // console.log("PDF text length:", pdfText.length);
+                // console.log("PDF text preview:", pdfText.substring(0, 1000));
+                
+                window.allQuestions = parseQuestions(pdfText);
+                window.allQuestions = allQuestions.map(q => ({ ...q, userAnswer: null }));
+
+                console.log("Số câu hỏi đã phân tích:", allQuestions.length);
+                
+                if (allQuestions.length === 0) {
+                    alert("Không thể phân tích được câu hỏi nào từ PDF. Vui lòng kiểm tra định dạng của tệp.");
+                    loadingView.classList.add('hidden');
+                    initialView.classList.remove('hidden');
+                    return;
+                }
+                
+                localStorage.setItem('satQuestions', JSON.stringify(allQuestions));
+                
+                loadingView.classList.add('hidden');
+                initialView.classList.remove('hidden');
+                modeSelection.classList.remove('hidden');
+                updateDashboard();
+
+            } catch (error) {
+                console.error("Lỗi khi xử lý PDF:", error);
+                alert("Đã xảy ra lỗi khi phân tích tệp PDF. Vui lòng thử lại.");
+                loadingView.classList.add('hidden');
+                initialView.classList.remove('hidden');
+            }
+        });
+
+        async function readPdfFile(file) {
+            const pdf = await pdfjsLib.getDocument({ url: URL.createObjectURL(file) }).promise;
+            let fullText = '';
+        
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const content = await page.getTextContent();
+            const strings = content.items.map(item => item.str);
+            fullText += strings.join('\n') + '\n';
+            }
+        
+            return fullText;
+        }
+        
+        function parseQuestions(text) {
+        const questions = [];
+        // Giữ nguyên regex tách hiện tại
+        const entries = text.split(/(?:^|\n)ID[\s:]+/g);
+        
+        console.log("Tổng số entries:", entries.length);
+
+        for (let i = 0; i < entries.length; i++) {
+            const entry = entries[i];
+            if (!entry.trim()) continue;
+
+            console.log(`\n=== Entry ${i} ===`);
+            console.log("Entry length:", entry.length);
+            console.log("Entry preview:", entry.substring(0, 200) + "...");
+
+            // Lấy ID
+            const idMatch = entry.match(/^(\w{6,})/);
+            const id = idMatch ? idMatch[1] : '';
+            console.log("ID found:", id);
+
+            // Lấy passage - sửa lại logic
+            let passage = '';
+            
+            // Tìm vị trí bắt đầu passage (sau ID: [số])
+            const idEnd = entry.indexOf(id) + id.length;
+            const passageStart = entry.indexOf('\n', idEnd);
+            
+            if (passageStart > 0) {
+            // Tìm vị trí kết thúc passage (trước câu hỏi)
+            const questionStart = entry.indexOf('Which choice', passageStart);
+            
+            if (questionStart > passageStart) {
+                passage = entry.substring(passageStart, questionStart).replace(/\s+/g, ' ').trim();
+                console.log("Passage extracted - length:", passage.length);
+            }
+            }
+
+            // Lấy question
+            const questionMatch = entry.match(/(Which choice.*?\?)/);
+            const question = questionMatch ? questionMatch[1].trim() : '';
+            console.log("Question found:", !!question);
+
+            // Lấy đáp án (A. ... B. ... C. ... D. ...)
+            // const optionMatches = [...entry.matchAll(/([ABCD]\.\s[\s\S]*?)(?=\n[ABCD]\. |\n\n|$)/g)];
+            // const options = optionMatches.map(m => m[1].replace(/\s+/g, ' ').trim());
+            // Tìm các đáp án bắt đầu sau câu hỏi
+            let options = [];
+if (questionMatch) {
+  const afterQuestion = entry.split(question)[1] || '';
+  const lines = afterQuestion.split('\n').map(l => l.trim()).filter(l => l);
+
+  let currentOpt = '';
+  for (let line of lines) {
+    const optMatch = line.match(/^([ABCD])\.\s*(.*)/);
+    if (optMatch) {
+      if (currentOpt) options.push(currentOpt.trim());
+      currentOpt = `${optMatch[1]}. ${optMatch[2]}`;
+    } else if (currentOpt) {
+      currentOpt += ' ' + line;
+    }
+    if (options.length === 4) break;
+  }
+  if (currentOpt && options.length < 4) options.push(currentOpt.trim());
+}
+
+            console.log("Options found:", options.length);
+
+
+            // Bỏ qua nếu thiếu dữ liệu quan trọng
+            if (!id || !question || options.length < 2) {
+            console.log("Skipping entry - missing required data");
+            continue;
+            }
+
+            // Tìm đáp án đúng và giải thích trong toàn bộ text
+            let correct = '';
+            let explanation = '';
+            
+            // Tìm phần "ID: [id] Answer" trong toàn bộ text
+            const answerSection = text.match(new RegExp(`ID:\\s*${id}\\s*Answer[\\s\\S]*?(?=ID:|$)`, 'i'));
+            
+            if (answerSection) {
+            const answerText = answerSection[0];
+            
+            // Tìm đáp án đúng trong phần answer
+            const correctMatch = answerText.match(/Correct Answer:\s*\n*\s*([ABCD])/i);
+            correct = correctMatch ? correctMatch[1] : '';
+            
+            // Tìm giải thích trong phần answer
+            const explanationMatch = answerText.match(/Rationale\s*([\s\S]*?)(?:Question Di|$)/i);
+            explanation = explanationMatch ? explanationMatch[1].replace(/\s+/g, ' ').trim() : '';
+            }
+
+            console.log("Final passage length:", passage.length);
+            console.log("Passage preview:", passage.substring(0, 100) + "...");
+            console.log("answerSection found:", !!answerSection);
+            console.log("correct:", correct);
+            console.log("explanation length:", explanation.length);
+            
+            questions.push({
+            id,
+            passage,
+            question,
+            options,
+            correct,
+            explanation,
+            });
+        }
+        return questions;
+        }
+
+        // --- UI Logic ---
+        function displayQuestion(index) {
+            const questionData = currentMode === 'test' ? testQuestions[index] : allQuestions[index];
+            if (!questionData) {
+                console.error("Không tìm thấy câu hỏi tại index:", index);
+                return;
+            }
+
+            console.log("Hiển thị câu hỏi:", questionData);
+            currentQuestionIndex = index;
+            
+            // Hiển thị passage
+            passageContent.innerHTML = questionData.passage ? questionData.passage.replace(/\n/g, '<br>') : '<em>Không có đoạn văn</em>';
+            
+            // Hiển thị câu hỏi
+            questionText.textContent = questionData.question || 'Không có câu hỏi';
+            
+            // Xóa các đáp án cũ
+            optionsContainer.innerHTML = '';
+
+            // Hiển thị các đáp án
+            if (questionData.options && questionData.options.length > 0) {
+                questionData.options.forEach(opt => {
+                    const parts = opt.split('.');
+                    const letter = parts[0].trim();
+                    const text = parts.slice(1).join('.').trim();
+
+                    const optionEl = document.createElement('div');
+                    optionEl.className = 'p-3 border rounded-lg cursor-pointer hover:bg-gray-100 transition-colors';
+                    optionEl.dataset.letter = letter;
+
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = 'option';
+                    radio.id = `option-${letter}`;
+                    radio.value = letter;
+                    radio.className = 'mr-3';
+                    if (questionData.userAnswer === letter) {
+                        radio.checked = true;
+                    }
+
+                    const label = document.createElement('label');
+                    label.htmlFor = `option-${letter}`;
+                    label.textContent = `${letter}. ${text}`;
+
+                    optionEl.appendChild(radio);
+                    optionEl.appendChild(label);
+
+                    optionEl.addEventListener('click', () => {
+                        radio.checked = true;
+                        handleOptionSelect(letter);
+                    });
+
+                    optionsContainer.appendChild(optionEl);
+                });
+
+            } else {
+                optionsContainer.innerHTML = '<p class="text-red-500">Không có đáp án nào được tìm thấy</p>';
+            }
+            
+            updateCountersAndButtons();
+            explanationArea.classList.add('hidden');
+        }
+        
+        function handleOptionSelect(letter) {
+            if (currentMode === 'review') {
+                allQuestions[currentQuestionIndex].userAnswer = letter;
+                saveProgress();
+            } else if (currentMode === 'test') {
+                userAnswers[testQuestions[currentQuestionIndex].id] = letter;
+                testQuestions[currentQuestionIndex].userAnswer = letter;
+
+            }
+        }
+
+        function updateCountersAndButtons() {
+            const questionList = currentMode === 'test' ? testQuestions : allQuestions;
+            questionCounter.textContent = `(${currentQuestionIndex + 1}/${questionList.length})`;
+            
+            prevBtn.disabled = currentQuestionIndex === 0;
+            nextBtnReview.disabled = currentQuestionIndex === questionList.length - 1;
+            nextBtn.disabled = currentQuestionIndex === questionList.length - 1;
+
+            if(currentMode === 'test' && currentQuestionIndex === questionList.length - 1){
+                nextBtn.classList.add('hidden');
+                submitBtn.classList.remove('hidden');
+            } else if (currentMode === 'test') {
+                nextBtn.classList.remove('hidden');
+                submitBtn.classList.add('hidden');
+            }
+        }
+
+        function showExplanation(isCorrect, selectedLetter) {
+            const questionData = allQuestions[currentQuestionIndex];
+            const options = Array.from(optionsContainer.children);
+            options.forEach(opt => {
+                const letter = opt.dataset.letter;
+                opt.classList.remove('cursor-pointer', 'hover:bg-gray-100');
+                opt.querySelector('input').disabled = true;
+
+                if (letter === questionData.correct) {
+                    opt.classList.add('bg-green-200', 'border-green-400');
+                }
+                if (!isCorrect && letter === selectedLetter) {
+                    opt.classList.add('bg-red-200', 'border-red-400');
+                }
+            });
+
+            explanationText.innerHTML = `<b>Đáp án đúng: ${questionData.correct}</b><br>${questionData.explanation.replace(/\n/g, '<br>')}`;
+            explanationArea.classList.remove('hidden');
+        }
+
+        function showTestResults() {
+            practiceArea.classList.add('hidden');
+            testResultView.classList.remove('hidden');
+
+            let correctCount = 0;
+            const resultDetails = document.getElementById('result-details');
+            resultDetails.innerHTML = '';
+
+            testQuestions.forEach((q, index) => {
+                const userAnswer = userAnswers[q.id];
+                const isCorrect = userAnswer === q.correct;
+                if (isCorrect) correctCount++;
+
+                const resultEl = document.createElement('div');
+                resultEl.className = 'p-4 border rounded-lg';
+                resultEl.innerHTML = `
+                    <p class="font-semibold">${index + 1}. ${q.question}</p>
+                    <p class="mt-2">Lựa chọn của bạn: <span class="${isCorrect ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}">${userAnswer || 'Chưa trả lời'}</span></p>
+                    <p class="mt-1">Đáp án đúng: <span class="text-green-600 font-bold">${q.correct}</span></p>
+                    ${!isCorrect ? `<div class="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded"><b>Giải thích:</b> ${q.explanation}</div>` : ''}
+                `;
+                if(userAnswer && !isCorrect) {
+                     resultEl.querySelector(`p:nth-child(2) span`).style.color = 'red';
+                }
+                resultDetails.appendChild(resultEl);
+            });
+
+            const scorePercentage = (correctCount / testQuestions.length) * 100;
+            document.getElementById('score').textContent = `Điểm của bạn: ${correctCount}/${testQuestions.length} (${scorePercentage.toFixed(2)}%)`;
+            
+            // Save test history
+            let history = JSON.parse(localStorage.getItem('satTestHistory')) || [];
+            history.unshift({
+                date: new Date().toLocaleString('vi-VN'),
+                score: scorePercentage,
+                count: testQuestions.length
+            });
+            localStorage.setItem('satTestHistory', JSON.stringify(history));
+            updateDashboard();
+        }
+
+        // --- Event Listeners ---
+        document.getElementById('review-mode-btn').addEventListener('click', () => {
+            if (allQuestions.length === 0) {
+                alert("Chưa có câu hỏi nào được tải. Vui lòng tải lên tệp PDF trước.");
+                return;
+            }
+            
+            currentMode = 'review';
+            initialView.classList.add('hidden');
+            practiceArea.classList.remove('hidden');
+            reviewControls.classList.remove('hidden');
+            testControls.classList.add('hidden');
+            prevBtn.classList.remove('hidden');
+            nextBtnReview.classList.remove('hidden');
+            displayQuestion(0);
+        });
+
+        document.getElementById('test-mode-btn').addEventListener('click', () => {
+            if (allQuestions.length === 0) {
+                alert("Chưa có câu hỏi nào được tải. Vui lòng tải lên tệp PDF trước.");
+                return;
+            }
+            
+            testModeModal.classList.remove('hidden');
+            const numInput = document.getElementById('num-questions');
+            numInput.max = allQuestions.length;
+            numInput.value = Math.min(10, allQuestions.length);
+        });
+        
+        document.getElementById('start-test-btn').addEventListener('click', () => {
+            const num = parseInt(document.getElementById('num-questions').value);
+            if (num > 0 && num <= allQuestions.length) {
+                currentMode = 'test';
+                // Create a shuffled subset of questions
+                testQuestions = [...allQuestions].sort(() => 0.5 - Math.random()).slice(0, num);
+                testQuestions.forEach(q => q.userAnswer = null);
+
+                userAnswers = {};
+                testModeModal.classList.add('hidden');
+                initialView.classList.add('hidden');
+                practiceArea.classList.remove('hidden');
+                reviewControls.classList.add('hidden');
+                testControls.classList.remove('hidden');
+                prevBtn.classList.add('hidden');
+                nextBtnReview.classList.add('hidden');
+                displayQuestion(0);
+            } else {
+                alert(`Vui lòng nhập một số từ 1 đến ${allQuestions.length}.`);
+            }
+        });
+        
+        document.getElementById('cancel-test-mode').addEventListener('click', () => {
+            testModeModal.classList.add('hidden');
+        });
+
+        checkBtn.addEventListener('click', () => {
+            const selectedOption = document.querySelector('input[name="option"]:checked');
+            if (!selectedOption) {
+                alert("Vui lòng chọn một đáp án.");
+                return;
+            }
+            const questionData = allQuestions[currentQuestionIndex];
+            const isCorrect = selectedOption.value === questionData.correct;
+            showExplanation(isCorrect, selectedOption.value);
+        });
+
+        prevBtn.addEventListener('click', () => {
+            if (currentQuestionIndex > 0) {
+                displayQuestion(currentQuestionIndex - 1);
+            }
+        });
+
+        nextBtnReview.addEventListener('click', () => {
+             const questionList = currentMode === 'test' ? testQuestions : allQuestions;
+            if (currentQuestionIndex < questionList.length - 1) {
+                displayQuestion(currentQuestionIndex + 1);
+            }
+        });
+        
+        nextBtn.addEventListener('click', () => {
+            const questionList = currentMode === 'test' ? testQuestions : allQuestions;
+            if (currentQuestionIndex < questionList.length - 1) {
+                displayQuestion(currentQuestionIndex + 1);
+            }
+        });
+
+        submitBtn.addEventListener('click', showTestResults);
+
+        document.getElementById('back-to-main').addEventListener('click', () => {
+            testResultView.classList.add('hidden');
+            initialView.classList.remove('hidden');
+        });
+
+        // Tab switching
+        tabPractice.addEventListener('click', () => {
+            practiceContent.classList.remove('hidden');
+            dashboardContent.classList.add('hidden');
+            QuestionListContent.classList.add('hidden');
+            tabPractice.classList.add('border-indigo-500', 'text-indigo-600');
+            tabPractice.classList.remove('border-transparent', 'text-gray-500');
+            tabDashboard.classList.add('border-transparent', 'text-gray-500');
+            tabDashboard.classList.remove('border-indigo-500', 'text-indigo-600');
+            tabQuestionList.classList.add('border-transparent', 'text-gray-500');
+            tabQuestionList.classList.remove('border-indigo-500', 'text-indigo-600');
+        });
+        
+        tabDashboard.addEventListener('click', () => {
+            practiceContent.classList.add('hidden');
+            dashboardContent.classList.remove('hidden');
+            QuestionListContent.classList.add('hidden');
+            tabDashboard.classList.add('border-indigo-500', 'text-indigo-600');
+            tabDashboard.classList.remove('border-transparent', 'text-gray-500');
+            tabPractice.classList.add('border-transparent', 'text-gray-500');
+            tabPractice.classList.remove('border-indigo-500', 'text-indigo-600');
+            tabQuestionList.classList.add('border-transparent', 'text-gray-500');
+            tabQuestionList.classList.remove('border-indigo-500', 'text-indigo-600');
+            updateDashboard();
+        });
+        
+        tabQuestionList.addEventListener('click', () => {
+            practiceContent.classList.add('hidden');
+            dashboardContent.classList.add('hidden');
+            QuestionListContent.classList.remove('hidden');
+
+            tabQuestionList.classList.add('border-indigo-500', 'text-indigo-600');
+            tabQuestionList.classList.remove('border-transparent', 'text-gray-500');
+
+            tabPractice.classList.add('border-transparent', 'text-gray-500');
+            tabPractice.classList.remove('border-indigo-500', 'text-indigo-600');
+            tabDashboard.classList.add('border-transparent', 'text-gray-500');
+            tabDashboard.classList.remove('border-indigo-500', 'text-indigo-600');
+
+            renderQuestionList();
+        });
+
+        // --- Persistence & Dashboard ---
+        function saveProgress() {
+            const progress = allQuestions.map(q => ({ id: q.id, userAnswer: q.userAnswer }));
+            localStorage.setItem('satProgress', JSON.stringify(progress));
+        }
+
+        function loadData() {
+            const savedQuestions = localStorage.getItem('satQuestions');
+            const savedProgress = localStorage.getItem('satProgress');
+
+            if (savedQuestions) {
+                allQuestions = JSON.parse(savedQuestions);
+                if (savedProgress) {
+                    const progress = JSON.parse(savedProgress);
+                    const progressMap = new Map(progress.map(p => [p.id, p.userAnswer]));
+                    allQuestions.forEach(q => {
+                        if (progressMap.has(q.id)) {
+                            q.userAnswer = progressMap.get(q.id);
+                        }
+                    });
+                }
+                modeSelection.classList.remove('hidden');
+                updateDashboard();
+            }
+        }
+        
+        function updateDashboard() {
+            document.getElementById('total-questions-stat').textContent = allQuestions.length;
+            
+            const answeredCount = allQuestions.filter(q => q.userAnswer !== null).length;
+            document.getElementById('answered-questions-stat').textContent = answeredCount;
+            
+            const history = JSON.parse(localStorage.getItem('satTestHistory')) || [];
+            document.getElementById('tests-taken-stat').textContent = history.length;
+
+            const historyContainer = document.getElementById('test-history-container');
+            if(history.length > 0) {
+                historyContainer.innerHTML = history.map(h => `
+                    <div class="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
+                        <p class="text-gray-700">${h.date}</p>
+                        <p class="text-gray-600">${h.count} câu hỏi</p>
+                        <p class="font-semibold ${h.score >= 80 ? 'text-green-600' : h.score >= 50 ? 'text-yellow-600' : 'text-red-600'}">${h.score.toFixed(2)}%</p>
+                    </div>
+                `).join('');
+            } else {
+                 historyContainer.innerHTML = '<p class="text-gray-500">Chưa có lịch sử thi thử.</p>';
+            }
+        }
+
+        function renderQuestionList() {
+            console.log("Gọi renderQuestionList", window.allQuestions?.length);
+
+            const list = document.getElementById("questionListContainer");
+            const data = window.currentMode === 'test' ? window.testQuestions : window.allQuestions;
+            list.innerHTML = data.map((q, idx) => {
+                const answered = q.userAnswer;
+                let color = 'lightgray';
+                if (answered) {
+                if (q.correct && answered === q.correct) color = '#a7f3d0'; // green
+                else color = '#fecaca'; // red
+                }
+                return `<button style="background:${color}; padding:10px; border-radius:6px" onclick="displayQuestion(${idx})">${idx + 1}</button>`;
+            }).join('');
+            }
+            // Initial load
+        loadData();
+
+    </script>
+</body>
+</html>

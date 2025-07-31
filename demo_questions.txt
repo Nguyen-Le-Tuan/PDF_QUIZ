@@ -1,0 +1,50 @@
+Question ID 12345678
+
+Passage: The Industrial Revolution was a period of major industrialization and innovation during the late 18th and early 19th centuries. The Industrial Revolution began in Great Britain and quickly spread throughout the world. This period saw the development of new technologies, including the steam engine, which revolutionized transportation and manufacturing.
+
+Which choice best describes the main impact of the Industrial Revolution?
+
+A. It led to the development of new agricultural techniques
+B. It revolutionized transportation and manufacturing through new technologies
+C. It caused a decline in urban population
+D. It resulted in the end of all traditional crafts
+
+ID: 12345678 Answer
+Correct Answer: B
+Rationale: The passage specifically mentions that the Industrial Revolution "saw the development of new technologies, including the steam engine, which revolutionized transportation and manufacturing." This directly supports choice B as the correct answer.
+
+Question Difficulty: Medium
+
+Question ID 87654321
+
+Passage: Climate change refers to long-term shifts in global weather patterns and average temperatures. Scientists have observed that the Earth's average temperature has increased by about 1.1 degrees Celsius since the late 19th century. This warming is primarily attributed to human activities, particularly the burning of fossil fuels which releases greenhouse gases into the atmosphere.
+
+What is the primary cause of recent climate change according to the passage?
+
+A. Natural weather cycles
+B. Volcanic eruptions
+C. Human activities, especially burning fossil fuels
+D. Changes in solar radiation
+
+ID: 87654321 Answer
+Correct Answer: C
+Rationale: The passage clearly states that "This warming is primarily attributed to human activities, particularly the burning of fossil fuels which releases greenhouse gases into the atmosphere." This directly supports choice C as the correct answer.
+
+Question Difficulty: Easy
+
+Question ID 11111111
+
+Passage: Artificial Intelligence (AI) has become increasingly prevalent in modern society. From virtual assistants on smartphones to recommendation algorithms on streaming platforms, AI technologies are transforming how we interact with digital systems. However, concerns have been raised about privacy, job displacement, and the potential for AI systems to perpetuate existing biases.
+
+Which of the following is NOT mentioned as a concern about AI in the passage?
+
+A. Privacy issues
+B. Job displacement
+C. Environmental impact
+D. Potential for bias in AI systems
+
+ID: 11111111 Answer
+Correct Answer: C
+Rationale: The passage mentions privacy (A), job displacement (B), and potential for bias (D) as concerns about AI. Environmental impact (C) is not mentioned anywhere in the passage, making it the correct answer.
+
+Question Difficulty: Medium 

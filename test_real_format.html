@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Định Dạng Thực Tế</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .question { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        .passage { background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .options { margin: 10px 0; }
+        .option { margin: 5px 0; padding: 8px; background: #f5f5f5; border-radius: 4px; }
+        .correct { background: #d4edda; border-color: #c3e6cb; }
+    </style>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-center mb-8">Test Định Dạng PDF Thực Tế</h1>
+        
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-4">Kết quả parse:</h2>
+            
+            <div id="question-display">
+                <!-- Kết quả sẽ được hiển thị ở đây -->
+            </div>
+            
+            <div class="mt-6">
+                <button onclick="testParse()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                    Test Parse
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dữ liệu PDF thực tế (từ console log)
+        const realPdfText = `Question ID 52aa1317
+ID: 52aa1317
+Raymond Antrobus, an accomplished poet and writer of prose, recently released his debut spoken word poetry album, The First Time I Wore Hearing Aids , in collaboration with producer Ian Brennan. The album contains both autobiographical and reflective pieces combining Antrobus's spoken words with Brennan's fragmented audio elements and pieces of music to convey how people who are deaf may experience sound, both its presence and absence. Some critics suggest that the album questions the function of sound in the world, highlighting that the experience of sound is multifaceted. Which choice best describes the overall structure of the text?
+A. It introduces a collaborative spoken word poetry project, details the approach taken to produce the work, and then provides an example of critique the album received upon release.
+B. It mentions a collection of spoken word poems, distinguishes one poem as being an exemplar on the album, and then summary of the subject matter of the whole collection summarizes the efforts to produce a collection of spoken poems, presents biographies of two people who worked on the album, and speculates about the meaning behind the connects two artists to the same spoken word poetry explains the extent of their collaboration on each provides an overview of the technique used to produce the work.
+C. It presents a detailed analysis of the album's musical composition and its impact on listeners.
+D. It compares the album to other works in the same genre and discusses its unique contributions.
+Correct Answer: A
+Rationale: Choice A is the best answer. The text first introduces the album as being a collaboration between Raymond Antrobus and Ian Brennan, then details the approach taken to produce the work by describing how the album combines spoken words with audio elements and music, and finally provides an example of critique the album received by mentioning what some critics suggest about the album's function.`;
+
+function extractQuizData(text) {
+        const questions = [];
+        // Giữ nguyên regex tách hiện tại
+        const entries = text.split(/(?:^|\n)ID[\s:]+/g);
+        
+        console.log("Tổng số entries:", entries.length);
+
+        for (let i = 0; i < entries.length; i++) {
+            const entry = entries[i];
+            if (!entry.trim()) continue;
+
+            console.log(`\n=== Entry ${i} ===`);
+            console.log("Entry length:", entry.length);
+            console.log("Entry preview:", entry.substring(0, 200) + "...");
+
+            // Lấy ID
+            const idMatch = entry.match(/^(\w{6,})/);
+            const id = idMatch ? idMatch[1] : '';
+            console.log("ID found:", id);
+
+            // Lấy passage - sửa lại logic
+            let passage = '';
+            
+            // Tìm vị trí bắt đầu passage (sau ID: [số])
+            const idEnd = entry.indexOf(id) + id.length;
+            const passageStart = entry.indexOf('\n', idEnd);
+            
+            if (passageStart > 0) {
+            // Tìm vị trí kết thúc passage (trước câu hỏi)
+            const questionStart = entry.indexOf('Which choice', passageStart);
+            
+            if (questionStart > passageStart) {
+                passage = entry.substring(passageStart, questionStart).replace(/\s+/g, ' ').trim();
+                console.log("Passage extracted - length:", passage.length);
+            }
+            }
+
+            // Lấy question
+            const questionMatch = entry.match(/(Which choice.*?\?)/);
+            const question = questionMatch ? questionMatch[1].trim() : '';
+            console.log("Question found:", !!question);
+
+            // Lấy đáp án (A. ... B. ... C. ... D. ...)
+            const optionMatches = [...entry.matchAll(/([ABCD]\.\s[\s\S]*?)(?=\n[ABCD]\. |\n\n|$)/g)];
+            const options = optionMatches.map(m => m[1].replace(/\s+/g, ' ').trim());
+            console.log("Options found:", options.length);
+
+            // Bỏ qua nếu thiếu dữ liệu quan trọng
+            if (!id || !question || options.length < 2) {
+            console.log("Skipping entry - missing required data");
+            continue;
+            }
+
+            // Tìm đáp án đúng và giải thích trong toàn bộ text
+            let correct = '';
+            let explanation = '';
+            
+            // Tìm phần "ID: [id] Answer" trong toàn bộ text
+            const answerSection = text.match(new RegExp(`ID:\\s*${id}\\s*Answer[\\s\\S]*?(?=ID:|$)`, 'i'));
+            
+            if (answerSection) {
+            const answerText = answerSection[0];
+            
+            // Tìm đáp án đúng trong phần answer
+            const correctMatch = answerText.match(/Correct Answer:\s*\n*\s*([ABCD])/i);
+            correct = correctMatch ? correctMatch[1] : '';
+            
+            // Tìm giải thích trong phần answer
+            const explanationMatch = answerText.match(/Rationale\s*([\s\S]*?)(?:Question Di|$)/i);
+            explanation = explanationMatch ? explanationMatch[1].replace(/\s+/g, ' ').trim() : '';
+            }
+
+            console.log("Final passage length:", passage.length);
+            console.log("Passage preview:", passage.substring(0, 100) + "...");
+            console.log("answerSection found:", !!answerSection);
+            console.log("correct:", correct);
+            console.log("explanation length:", explanation.length);
+            
+            questions.push({
+            id,
+            passage,
+            question,
+            options,
+            correct,
+            explanation,
+            });
+        }
+        return questions;
+}
+
+        function displayQuestion(question) {
+            const displayDiv = document.getElementById('question-display');
+            
+            let html = `
+                <div class="question">
+                    <h3 class="font-semibold text-lg mb-3">Câu hỏi ID: ${question.id}</h3>
+                    
+                    <div class="mb-4">
+                        <h4 class="font-medium text-gray-700 mb-2">Đoạn văn:</h4>
+                        <div class="passage">${question.passage}</div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h4 class="font-medium text-gray-700 mb-2">Câu hỏi:</h4>
+                        <p class="text-lg">${question.question}</p>
+                    </div>
+                    
+                    <div class="options">
+                        <h4 class="font-medium text-gray-700 mb-2">Các đáp án:</h4>
+            `;
+
+            question.options.forEach(option => {
+                let optionClass = "option";
+                if (option.letter === question.correctAnswer) {
+                    optionClass += " correct";
+                }
+                
+                html += `
+                    <div class="${optionClass}">
+                        <strong>${option.letter}.</strong> ${option.text}
+                        ${option.letter === question.correctAnswer ? ' ✓' : ''}
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                    
+                    <div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400">
+                        <h4 class="font-medium text-blue-800">Giải thích:</h4>
+                        <p class="text-blue-700">${question.explanation}</p>
+                    </div>
+                </div>
+            `;
+            
+            displayDiv.innerHTML = html;
+        }
+
+        function testParse() {
+            console.log("=== TEST PARSE ===");
+            const questions = extractQuizData(realPdfText);
+            
+            if (questions.length > 0) {
+                displayQuestion(questions[0]);
+                console.log("Hiển thị câu hỏi:", questions[0]);
+            } else {
+                document.getElementById('question-display').innerHTML = 
+                    '<p class="text-red-500">Không thể parse được câu hỏi nào!</p>';
+            }
+        }
+
+        // Tự động test khi trang được tải
+        window.onload = function() {
+            testParse();
+        };
+    </script>
+</body>
+</html> 

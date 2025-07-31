@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug PDF Content</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .info { background: #d1ecf1; border-color: #bee5eb; }
+        pre { white-space: pre-wrap; word-wrap: break-word; background: #f8f9fa; padding: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold text-center mb-8">Debug PDF Content</h1>
+        
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-4">Tải lên PDF để debug:</h2>
+            
+            <div class="mb-6">
+                <label for="pdf-upload" class="cursor-pointer bg-blue-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors">
+                    Chọn tệp PDF
+                </label>
+                <input type="file" id="pdf-upload" class="hidden" accept=".pdf">
+            </div>
+            
+            <div id="debug-output">
+                <!-- Kết quả debug sẽ hiển thị ở đây -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
+
+        document.getElementById('pdf-upload').addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const debugOutput = document.getElementById('debug-output');
+            debugOutput.innerHTML = '<div class="debug-section info">Đang đọc PDF...</div>';
+
+            try {
+                const pdfText = await readPdfFile(file);
+                debugPdfContent(pdfText);
+            } catch (error) {
+                debugOutput.innerHTML = `<div class="debug-section error">Lỗi: ${error.message}</div>`;
+            }
+        });
+
+        async function readPdfFile(file) {
+            const fileReader = new FileReader();
+            return new Promise((resolve, reject) => {
+                fileReader.onload = async (event) => {
+                    const typedarray = new Uint8Array(event.target.result);
+                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    let fullText = '';
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const textContent = await page.getTextContent();
+                        fullText += textContent.items.map(item => item.str).join(' ') + '\n\n';
+                    }
+                    resolve(fullText);
+                };
+                fileReader.onerror = reject;
+                fileReader.readAsArrayBuffer(file);
+            });
+        }
+
+        function debugPdfContent(text) {
+            const debugOutput = document.getElementById('debug-output');
+            let html = '';
+
+            // Thông tin cơ bản
+            html += `
+                <div class="debug-section info">
+                    <h3>📊 Thông tin cơ bản</h3>
+                    <p><strong>Độ dài text:</strong> ${text.length} ký tự</p>
+                    <p><strong>1000 ký tự đầu:</strong></p>
+                    <pre>${text.substring(0, 1000)}</pre>
+                </div>
+            `;
+
+            // Kiểm tra các pattern
+            const patterns = [
+                { name: 'Question ID', pattern: /Question ID/g, count: (text.match(/Question ID/g) || []).length },
+                { name: 'ID:', pattern: /ID:/g, count: (text.match(/ID:/g) || []).length },
+                { name: 'Correct Answer:', pattern: /Correct Answer:/g, count: (text.match(/Correct Answer:/g) || []).length },
+                { name: 'Rationale:', pattern: /Rationale:/g, count: (text.match(/Rationale:/g) || []).length },
+                { name: 'A.', pattern: /A\./g, count: (text.match(/A\./g) || []).length },
+                { name: 'B.', pattern: /B\./g, count: (text.match(/B\./g) || []).length },
+                { name: 'C.', pattern: /C\./g, count: (text.match(/C\./g) || []).length },
+                { name: 'D.', pattern: /D\./g, count: (text.match(/D\./g) || []).length }
+            ];
+
+            html += `
+                <div class="debug-section info">
+                    <h3>🔍 Kiểm tra các pattern</h3>
+                    <table class="w-full border-collapse border border-gray-300">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="border border-gray-300 p-2">Pattern</th>
+                                <th class="border border-gray-300 p-2">Số lần xuất hiện</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            patterns.forEach(pattern => {
+                const status = pattern.count > 0 ? 'success' : 'error';
+                html += `
+                    <tr class="${status === 'success' ? 'bg-green-50' : 'bg-red-50'}">
+                        <td class="border border-gray-300 p-2 font-mono">${pattern.name}</td>
+                        <td class="border border-gray-300 p-2 text-center">${pattern.count}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            // Thử parse với logic hiện tại
+            const questions = parseQuestions(text);
+            
+            html += `
+                <div class="debug-section ${questions.length > 0 ? 'success' : 'error'}">
+                    <h3>📝 Kết quả parse</h3>
+                    <p><strong>Số câu hỏi tìm thấy:</strong> ${questions.length}</p>
+                    ${questions.length > 0 ? `
+                        <p><strong>Câu hỏi đầu tiên:</strong></p>
+                        <pre>${JSON.stringify(questions[0], null, 2)}</pre>
+                    ` : '<p>Không tìm thấy câu hỏi nào!</p>'}
+                </div>
+            `;
+
+            // Gợi ý sửa lỗi
+            if (questions.length === 0) {
+                html += `
+                    <div class="debug-section error">
+                        <h3>💡 Gợi ý sửa lỗi</h3>
+                        <ul class="list-disc pl-5">
+                            <li>Kiểm tra xem PDF có chứa "Question ID" không</li>
+                            <li>Kiểm tra định dạng đáp án có dạng "A.", "B.", "C.", "D." không</li>
+                            <li>Kiểm tra có "Correct Answer:" không</li>
+                            <li>Nếu không có "Question ID", có thể cần thay đổi logic parse</li>
+                        </ul>
+                    </div>
+                `;
+            }
+
+            debugOutput.innerHTML = html;
+        }
+
+        function parseQuestions(text) {
+            const questions = [];
+            
+            // Làm sạch text
+            text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            
+            // Tách theo Question ID pattern
+            const questionBlocks = text.split(/(?=Question ID \w{8})/);
+            
+            for (let i = 0; i < questionBlocks.length; i++) {
+                const block = questionBlocks[i];
+                if (!block.trim()) continue;
+
+                try {
+                    // Tìm ID
+                    let id = `q_${i + 1}`;
+                    const idMatch = block.match(/Question ID (\w{8})/);
+                    if (idMatch) {
+                        id = idMatch[1];
+                    }
+
+                    // Tìm đáp án đúng
+                    let correctAnswer = null;
+                    const answerMatch = block.match(/Correct Answer: ([A-D])/);
+                    if (answerMatch) {
+                        correctAnswer = answerMatch[1];
+                    }
+
+                    // Tìm giải thích
+                    let explanation = "Không có giải thích.";
+                    const rationaleMatch = block.match(/Rationale:([\s\S]*?)(?=Question Difficulty:|$)/);
+                    if (rationaleMatch) {
+                        explanation = rationaleMatch[1].trim();
+                    }
+
+                    // Tách passage, question và options
+                    let passage = "";
+                    let question = "";
+                    let options = [];
+
+                    // Tìm phần nội dung chính (sau ID: và trước Correct Answer)
+                    const contentMatch = block.match(/ID: \w{8}([\s\S]*?)Correct Answer:/);
+                    if (contentMatch) {
+                        let mainContent = contentMatch[1].trim();
+                        
+                        // Tìm các đáp án A, B, C, D
+                        const optionRegex = /\n([A-D])\.\s*([^\n]+(?:\n(?!\s*[A-D]\.)[^\n]+)*)/g;
+                        const optionMatches = mainContent.match(optionRegex);
+                        
+                        if (optionMatches && optionMatches.length >= 2) {
+                            options = optionMatches.map(match => {
+                                const letter = match.charAt(0);
+                                const text = match.substring(3).trim();
+                                return { letter, text };
+                            });
+                            
+                            // Loại bỏ phần options khỏi mainContent để tìm passage và question
+                            let contentWithoutOptions = mainContent.replace(optionRegex, '');
+                            
+                            // Tìm câu hỏi (thường kết thúc bằng dấu ?)
+                            const questionMatch = contentWithoutOptions.match(/([^?]+\?)/);
+                            if (questionMatch) {
+                                question = questionMatch[1].trim();
+                                // Phần còn lại là passage
+                                const questionIndex = contentWithoutOptions.indexOf(question);
+                                if (questionIndex > 0) {
+                                    passage = contentWithoutOptions.substring(0, questionIndex).trim();
+                                }
+                            } else {
+                                // Fallback: tìm dấu :
+                                const colonMatch = contentWithoutOptions.match(/([^:]+:)/);
+                                if (colonMatch) {
+                                    question = colonMatch[1].trim();
+                                    const colonIndex = contentWithoutOptions.indexOf(question);
+                                    if (colonIndex > 0) {
+                                        passage = contentWithoutOptions.substring(0, colonIndex).trim();
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Chỉ thêm câu hỏi nếu có đủ thông tin
+                    if (question && options.length >= 2 && options.length <= 10) {
+                        questions.push({
+                            id,
+                            passage: passage || "Không có đoạn văn",
+                            question: question,
+                            options: options,
+                            correctAnswer: correctAnswer || 'A',
+                            explanation: explanation,
+                            userAnswer: null
+                        });
+                    }
+
+                } catch (e) {
+                    console.warn("Lỗi khi phân tích khối", i + 1, ":", e);
+                }
+            }
+            
+            return questions;
+        }
+    </script>
+</body>
+</html> 
