@@ -384,7 +384,7 @@ if (questionMatch) {
         }
 
         // --- UI Logic ---
-        function displayQuestion(index) {
+        window.displayQuestion = function(index) {
             const questionData = currentMode === 'test' ? testQuestions[index] : allQuestions[index];
             if (!questionData) {
                 console.error("Không tìm thấy câu hỏi tại index:", index);
@@ -721,8 +721,6 @@ if (questionMatch) {
         }
 
         function renderQuestionList() {
-            console.log("Gọi renderQuestionList", window.allQuestions?.length);
-
             const list = document.getElementById("questionListContainer");
             const data = window.currentMode === 'test' ? window.testQuestions : window.allQuestions;
             list.innerHTML = data.map((q, idx) => {
@@ -732,10 +730,29 @@ if (questionMatch) {
                 if (q.correct && answered === q.correct) color = '#a7f3d0'; // green
                 else color = '#fecaca'; // red
                 }
-                return `<button style="background:${color}; padding:10px; border-radius:6px" onclick="displayQuestion(${idx})">${idx + 1}</button>`;
+                return `<button style="background:${color}; padding:10px; border-radius:6px" onclick="jumpToQuestion(${idx})">${idx + 1}</button>`;
             }).join('');
             }
-            // Initial load
+        window.jumpToQuestion = function(index) {
+            // Chuyển tab về luyện tập
+            QuestionListContent.classList.add('hidden');
+            practiceContent.classList.remove('hidden');
+            // Để không bị trả về trang practice mà không có nội dung câu hỏi
+            initialView.classList.add('hidden');
+            practiceArea.classList.remove('hidden');
+            reviewControls.classList.remove('hidden');
+            testControls.classList.add('hidden');
+            prevBtn.classList.remove('hidden');
+            nextBtnReview.classList.remove('hidden');
+            displayQuestion(index);
+
+            // Cập nhật màu tab
+            tabQuestionList.classList.remove('border-indigo-500', 'text-indigo-600');
+            tabQuestionList.classList.add('border-transparent', 'text-gray-500');
+            tabPractice.classList.add('border-indigo-500', 'text-indigo-600');
+            tabPractice.classList.remove('border-transparent', 'text-gray-500');
+            }
+
         loadData();
 
     </script>
